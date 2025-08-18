@@ -3,12 +3,6 @@ import { NextRequest, NextResponse } from 'next/server'
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY
 const AIRTABLE_BASE_ID = process.env.NEXT_PUBLIC_AIRTABLE_BASE_ID
 
-// Define interface for Airtable table structure
-interface AirtableTable {
-  id: string;
-  name: string;
-}
-
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 Airtable Info API called')
@@ -58,20 +52,36 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const data = await airtableResponse.json()
-    console.log('📊 Airtable base info retrieved successfully')
+    // Parse the Airtable response
+    const airtableResult = await airtableResponse.json()
+    console.log('✅ Successfully accessed Airtable base info')
     
-    // Extract table IDs and names
-    const tableIds = data.tables.map((table: AirtableTable) => ({
-      id: table.id,
-      name: table.name
-    }))
+    // Define interface for Airtable table structure
+    interface AirtableTable {
+      id: string;
+      name: string;
+      // Add other properties as needed
+    }
 
-    return NextResponse.json({ success: true, tables: tableIds })
-  } catch (error) {
-    console.error('Unexpected error in Airtable Info API:', error)
+    // Return a sanitized version of the response (without sensitive info)
     return NextResponse.json(
-      { error: 'Unexpected server error', details: String(error) },
+      { 
+        success: true,
+        baseId: AIRTABLE_BASE_ID,
+        tableCount: airtableResult.tables?.length || 0,
+        tableIds: airtableResult.tables?.map((table: AirtableTable) => ({
+          id: table.id,
+          name: table.name
+        })) || [],
+        message: 'Successfully accessed Airtable base info'
+      },
+      { status: 200 }
+    )
+
+  } catch (error) {
+    console.error('Airtable Info API error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
       { status: 500 }
     )
   }
